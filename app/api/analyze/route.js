@@ -75,6 +75,31 @@ export async function POST(request) {
  */
 async function callOpenAI(text, mbti, locale) {
   const systemPrompt = buildPrompt(mbti, locale);
+  
+  // 調試日誌
+  console.log('🔍 OpenAI 調用信息:');
+  console.log('  - API Key (首20字符):', LLM_API_KEY?.substring(0, 20) + '...');
+  console.log('  - 模型:', LLM_MODEL);
+  console.log('  - Provider:', LLM_PROVIDER);
+
+  const requestBody = {
+    model: LLM_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: `請分析以下文字，必須返回 JSON 格式：\n\n${text}`
+      }
+    ],
+    temperature: 0.7,
+    max_tokens: 1500,
+    response_format: { type: "json_object" }
+  };
+
+  console.log('📤 請求 body:', JSON.stringify(requestBody).substring(0, 200) + '...');
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -82,25 +107,15 @@ async function callOpenAI(text, mbti, locale) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${LLM_API_KEY}`
     },
-    body: JSON.stringify({
-      model: LLM_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: `請分析以下文字：\n\n${text}`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000
-    })
+    body: JSON.stringify(requestBody)
   });
 
+  console.log('📥 OpenAI 響應狀態:', response.status);
+
   if (!response.ok) {
-    throw new Error(`OpenAI API 錯誤: ${response.status} ${response.statusText}`);
+    const errorData = await response.text();
+    console.error('❌ OpenAI 錯誤詳情:', errorData);
+    throw new Error(`OpenAI API 錯誤: ${response.status} ${response.statusText} - ${errorData}`);
   }
 
   const data = await response.json();
@@ -158,9 +173,9 @@ function buildPrompt(mbti, locale) {
 
   return `你是一位專業的心理學家，擅長 MBTI 人格分析。
 
-請以 ${mbti} 人格類型的視角分析用戶提供的文字。你的回應必須是 JSON 格式，使用 ${localeLabel} 表達。
+請以 ${mbti} 人格類型的視角分析用戶提供的文字。你的回應必須是有效的 JSON 格式，使用 ${localeLabel} 表達。
 
-JSON 結構必須如下：
+返回以下 JSON 結構（確保有效的 JSON）：
 {
   "literal": "字面意思（對原文的直白理解）",
   "signals": [
@@ -179,11 +194,13 @@ JSON 結構必須如下：
   "summary": "整體分析摘要（一句話）"
 }
 
-重要：
-1. 只返回 JSON，不要有其他文字
+重要規則：
+1. 只返回有效的 JSON，不要有任何其他文字或 markdown 代碼塊
 2. 所有文字使用 ${localeLabel}
 3. 每個陣列至少包含 2-3 個項目
-4. 保持專業、客觀的語氣`;
+4. 確保所有字符串正確轉義（特別是引號和換行）
+5. 保持專業、客觀的語氣
+6. 不要包含任何代碼塊標記（如 \`\`\`json）`;
 }
 
 /**
