@@ -5,9 +5,15 @@
 
 // ============ 配置部分 ============
 // 支持的 LLM 提供商
-const LLM_PROVIDER = process.env.LLM_PROVIDER || 'openai'; // 'openai', 'anthropic', 'mock'
-const LLM_API_KEY = process.env.LLM_API_KEY || '';
-const LLM_MODEL = process.env.LLM_MODEL || 'gpt-3.5-turbo';
+// 重要：這些必須從 Vercel 環境變數中讀取，不能有預設值
+const LLM_PROVIDER = process.env.LLM_PROVIDER;
+const LLM_API_KEY = process.env.LLM_API_KEY;
+const LLM_MODEL = process.env.LLM_MODEL;
+
+// 驗證必要的配置
+if (!LLM_PROVIDER) {
+  console.error('❌ 錯誤：未設定 LLM_PROVIDER 環境變數');
+}
 
 // ============ 核心 API Handler ============
 export async function POST(request) {
