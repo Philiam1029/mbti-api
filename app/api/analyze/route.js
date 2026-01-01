@@ -95,8 +95,7 @@ async function callOpenAI(text, mbti, locale) {
       }
     ],
     temperature: 0.7,
-    max_tokens: 1500,
-    response_format: { type: "json_object" }
+    max_tokens: 1500
   };
 
   console.log('📤 請求 body:', JSON.stringify(requestBody).substring(0, 200) + '...');
